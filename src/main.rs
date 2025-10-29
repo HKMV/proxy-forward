@@ -1,3 +1,4 @@
+use crate::core::config::AppConfig;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
@@ -9,17 +10,23 @@ mod libs;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     libs::logs::init_default()?;
+    let config = AppConfig::init().expect("读取配置文件失败");
 
-    let listener = TcpListener::bind("127.0.0.1:1080").await?;
+    let listener = TcpListener::bind(config.listen_addr.as_str()).await?;
+    info!("SOCKS5 proxy listening on {}", config.listen_addr);
 
-    info!("SOCKS5 proxy listening on 127.0.0.1:1080");
-
-    let rule = core::route::RouteRule::new("192.168.120.177:81", "/api", "127.0.0.1:8686", "");
     let mut vec = Vec::new();
-    vec.push(rule);
+    for r in config.rules {
+        let rule = core::route::RouteRule::new(
+            r.matcher.addr.as_str(),
+            r.matcher.path_prefix.as_str(),
+            r.forward.addr.as_str(),
+            r.forward.path_prefix.as_str(),
+        );
+        vec.push(rule);
+    }
     let rules = Arc::new(RwLock::new(vec));
     let route_engine = Arc::new(core::route::RouteEngine { rules });
-
     loop {
         let (socket, _) = listener.accept().await?;
         let engine = route_engine.clone();
