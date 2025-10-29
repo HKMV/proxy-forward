@@ -199,14 +199,14 @@ fn modify_http_data(data: &mut [u8], rule: &RouteRule) -> Option<Vec<u8>> {
                     return None;
                 };
                 debug!("Original URL path: {}", path);
-                let new_path = path.replace(prefix, &rule.forward.prefix);
+                let new_path = path.replacen(prefix, &rule.forward.prefix, 1);
                 debug!("Modified URL path: {}", new_path);
 
                 let data_str = std::str::from_utf8(data)
                     .unwrap()
                     .to_string()
-                    // .replace("\r\nConnection: keep-alive", "")
-                    .replace(path, new_path.as_str());
+                    // .replacen("\r\nConnection: keep-alive", "", 1)
+                    .replacen(path, new_path.as_str(), 1);
                 Some(data_str.into_bytes())
             } else {
                 None
