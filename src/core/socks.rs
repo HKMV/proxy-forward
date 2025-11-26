@@ -50,7 +50,7 @@ pub(crate) async fn handle_client(
     let mut buf = BytesMut::with_capacity(256);
     client.read_buf(&mut buf).await?;
 
-    if buf[0] != 0x05 {
+    if buf.is_empty() || buf[0] != 0x05 {
         return Err(anyhow!("Unsupported SOCKS version"));
     }
 
