@@ -64,7 +64,7 @@ pub(crate) async fn handle_client(
 
     // 2. 处理请求
     client.read_buf(&mut buf).await?;
-    if buf[0] != 0x05 {
+    if buf.is_empty() || buf[0] != 0x05 {
         return Err(anyhow!("Unsupported SOCKS version in request"));
     }
     let _cmd = Command::from_u8(buf[1]).ok_or(anyhow!("Unsupported command"))?;
