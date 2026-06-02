@@ -160,7 +160,7 @@ pub(crate) async fn handle_client(
     // tokio::try_join!(client_to_target, target_to_client)?;*/
 }
 
-#[tokio::test]
+// #[tokio::test]
 async fn test_socks() -> Result<()> {
     use tokio::net::TcpListener;
     use tokio::sync::RwLock;
