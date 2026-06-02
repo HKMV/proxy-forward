@@ -1,0 +1,11 @@
+listen_addr = "127.0.0.1:1080"
+
+[[rules]]
+
+[rules.matcher]
+addr = "192.168.120.177:81"
+path_prefix = "/api"
+
+[rules.forward]
+addr = "127.0.0.1:8686"
+path_prefix = ""
