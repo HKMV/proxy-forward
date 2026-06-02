@@ -71,6 +71,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -111,6 +113,7 @@ jobs:
           asset_path: release/ubuntu/proxy-forward-ubuntu-latest
           asset_name: proxy-forward-linux
           asset_content_type: application/octet-stream
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload macOS binary
         uses: actions/upload-release-asset@v1
@@ -119,6 +122,7 @@ jobs:
           asset_path: release/macos/proxy-forward-macos-latest
           asset_name: proxy-forward-macos
           asset_content_type: application/octet-stream
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Windows binary
         uses: actions/upload-release-asset@v1
@@ -127,3 +131,4 @@ jobs:
           asset_path: release/windows/proxy-forward-windows-latest.exe
           asset_name: proxy-forward-windows.exe
           asset_content_type: application/octet-stream
+          token: ${{ secrets.GITHUB_TOKEN }}
