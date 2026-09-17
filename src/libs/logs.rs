@@ -82,14 +82,13 @@ fn hook_panic_handler(logs_dir: String, app_name: String) {
             });
 
         let _ = OpenOptions::new()
-            .write(true)
             .append(true)
             .create(true) // 如果文件不存在，则创建文件
             .open(format!("{}{}.panic.log", logs_dir, app_name))
             .and_then(|mut f| {
                 f.write_all(format!("{} {:?}\n{:#?}\n", current_time, info, backtrace).as_bytes())
             });
-        println!("{}", "panic backtrace saved");
+        println!("panic backtrace saved");
         std::process::exit(1);
     }));
 }

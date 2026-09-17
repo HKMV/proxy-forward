@@ -5,7 +5,6 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0"
-thiserror = "2.0"
 
 config = "0.15"
 serde = { version = "1.0", features = ["derive"] }
@@ -17,13 +16,6 @@ tracing-subscriber = { version = "0.3", features = ["time"] }
 tracing-appender = "0.2"
 
 time = { version = "0.3", features = ["parsing", "macros"] }
-chrono = "0.4"
-
-strum = "0.27"
-strum_macros = "0.27"
 
 tokio = { version = "1", features = ["full"] }
-#tokio-rustls = "0.26.2"
-bytes = "1"
 httparse = "1.10"
-memchr = "2.7"

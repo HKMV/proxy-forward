@@ -38,9 +38,7 @@ pub(crate) async fn forward_handle(
                 //转发服务连接不上，终止需要转发的请求
                 error!("Connect to forward host failed, stop access: {}", e);
 
-                if let Err(e) = client_writer
-                    .write_all(service_unavailable().as_slice())
-                    .await
+                if let Err(e) = client_writer.write_all(service_unavailable()).await
                 {
                     error!("Forward write error: {}", e);
                 }
@@ -68,18 +66,15 @@ pub(crate) async fn forward_handle(
     let client_writer_c = client_writer.clone();
     let client_to_server = tokio::spawn(async move {
         let mut buf = [0u8; 8192];
-        let mut flag = 0;
         loop {
             let n = match client_reader.read(&mut buf).await {
-                Ok(n) if n == 0 => break, // EOF
+                Ok(0) => break, // EOF
                 Ok(n) => n,
                 Err(e) => {
                     error!("Client read error: {}", e);
                     break;
                 }
             };
-            debug!("flag: {}", flag);
-            flag += 1;
 
             // 如果是HTTP流量，可以进行修改
             if !is_http {
@@ -89,7 +84,7 @@ pub(crate) async fn forward_handle(
                 }
                 continue;
             }
-            match modify_http_data(&mut buf[..n], &rule) {
+            match modify_http_data(&buf[..n], &rule) {
                 None => {
                     if let Err(e) = server_writer.write_all(&buf[..n]).await {
                         error!("Server write error: {}", e);
@@ -99,14 +94,14 @@ pub(crate) async fn forward_handle(
                 Some(d) => {
                     if let Some(fw) = &mut forward_writer {
                         debug!("forward_writer: {}", &rule.forward.host);
-                        if let Err(e) = fw.write_all(&*d).await {
+                        if let Err(e) = fw.write_all(&d).await {
                             error!("Forward write error: {}", e);
                             break;
                         }
                     } else if let Err(e) = client_writer_c
                         .lock()
                         .await
-                        .write_all(service_unavailable().as_slice())
+                        .write_all(service_unavailable())
                         .await
                     {
                         error!("Forward write error: {}", e);
@@ -127,7 +122,7 @@ pub(crate) async fn forward_handle(
             let mut buf = [0u8; 8192];
             loop {
                 let n = match server_reader.read(&mut buf).await {
-                    Ok(n) if n == 0 => break, // EOF
+                    Ok(0) => break, // EOF
                     Ok(n) => n,
                     Err(e) => {
                         error!("Server read error: {}", e);
@@ -148,7 +143,7 @@ pub(crate) async fn forward_handle(
                 let mut buf = [0u8; 8192];
                 loop {
                     let n = match fr.read(&mut buf).await {
-                        Ok(n) if n == 0 => break, // EOF
+                        Ok(0) => break, // EOF
                         Ok(n) => n,
                         Err(e) => {
                             error!("Forward read error: {}", e);
@@ -173,50 +168,33 @@ pub(crate) async fn forward_handle(
     Ok(())
 }
 
-fn modify_http_data(data: &mut [u8], rule: &RouteRule) -> Option<Vec<u8>> {
-    if data.len() >= 4 && data.starts_with(b"HTTP/") {
-        //响应数据
+fn modify_http_data(data: &[u8], rule: &RouteRule) -> Option<Vec<u8>> {
+    if data.starts_with(b"HTTP/") {
+        // 响应数据，不改写
         return None;
     }
 
     let mut headers = [httparse::EMPTY_HEADER; 16];
     let mut req = httparse::Request::new(&mut headers);
+    let path = match req.parse(data) {
+        Ok(Status::Complete(_)) => req.path?,
+        _ => return None, // 非完整HTTP请求或不支持的格式
+    };
 
-    match req.parse(data) {
-        Ok(Status::Complete(_pos)) => {
-            // 解析成功，修改URL
-            if let Some(path) = req.path {
-                // debug!("Original data: {}", String::from_utf8_lossy(data));
-                // debug!("Original data: {:?}", std::str::from_utf8(data));
-
-                // 创建新的URL路径
-                let prefix = &rule.match_.prefix;
-                if prefix.is_empty()
-                    || prefix.eq("/")
-                    || !path.starts_with(prefix)
-                    || !rule.forward.rewrite
-                {
-                    return None;
-                };
-                debug!("Original URL path: {}", path);
-                let new_path = path.replacen(prefix, &rule.forward.prefix, 1);
-                debug!("Modified URL path: {}", new_path);
-
-                let data_str = std::str::from_utf8(data)
-                    .unwrap()
-                    .to_string()
-                    // .replacen("\r\nConnection: keep-alive", "", 1)
-                    .replacen(path, new_path.as_str(), 1);
-                Some(data_str.into_bytes())
-            } else {
-                None
-            }
-        }
-        _ => {
-            // 非完整HTTP请求或不支持的格式
-            None
-        }
+    let prefix = &rule.match_.prefix;
+    if !rule.forward.rewrite || prefix.is_empty() || prefix == "/" || !path.starts_with(prefix) {
+        return None;
     }
+    debug!("Rewrite URL path: {} -> {}", path, path.replacen(prefix, &rule.forward.prefix, 1));
+    let new_path = path.replacen(prefix, &rule.forward.prefix, 1);
+
+    // 只改写请求行(ASCII)，正文原样拼接，避免二进制 body 触发 UTF-8 panic
+    let line_end = data.windows(2).position(|w| w == *b"\r\n")?;
+    let line = std::str::from_utf8(&data[..line_end]).ok()?;
+    let mut out = Vec::with_capacity(data.len() + new_path.len());
+    out.extend_from_slice(line.replacen(path, &new_path, 1).as_bytes());
+    out.extend_from_slice(&data[line_end..]);
+    Some(out)
 }
 
 fn is_http(data: &[u8], size: usize) -> bool {
@@ -226,12 +204,14 @@ fn is_http(data: &[u8], size: usize) -> bool {
             || data.starts_with(b"PUT ")
             || data.starts_with(b"PATCH ")
             || data.starts_with(b"DELETE ")
+            || data.starts_with(b"HEAD ")
+            || data.starts_with(b"OPTIONS ")
             || data.starts_with(b"HTTP/"))
 }
 
 fn parse_path(data: &[u8]) -> Option<&str> {
     // 找到请求行的结束位置\r\n
-    let end = data.windows(2).position(|w| w == [b'\r', b'\n'])?;
+    let end = data.windows(2).position(|w| w == *b"\r\n")?;
     let request_line = &data[..end];
 
     // 按空格分割并过滤空字段
@@ -271,11 +251,6 @@ pub(crate) async fn parse_http_header(stream: &TcpStream) -> Option<(String, Str
     Some((host, path))
 }
 
-fn service_unavailable() -> Vec<u8> {
-    let response = b"HTTP/1.1 503 Service Unavailable\r\n\
-        Content-Type: text/plain\r\n\
-        Content-Length: 17\r\n\
-        Connection: close\r\n\r\n\
-        Service Unavailable";
-    response.to_vec()
+fn service_unavailable() -> &'static [u8] {
+    b"HTTP/1.1 503 Service Unavailable\r\nContent-Type: text/plain\r\nContent-Length: 19\r\nConnection: close\r\n\r\nService Unavailable"
 }

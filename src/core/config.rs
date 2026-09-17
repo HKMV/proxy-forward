@@ -37,7 +37,7 @@ impl AppConfig {
             let mut file = std::fs::File::create(conf_file_path).unwrap();
             let config = AppConfig::default();
             let ac = toml::to_string(&config).unwrap_or("".into());
-            file.write(ac.as_ref()).unwrap();
+            file.write_all(ac.as_ref()).unwrap();
             file.flush().unwrap();
         }
 

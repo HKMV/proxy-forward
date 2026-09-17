@@ -26,6 +26,7 @@ impl RouteRule {
             },
         }
     }
+    #[allow(unused)]
     fn matches(&self, host: &str, prefix: &str) -> bool {
         (prefix.starts_with(&self.match_.prefix))
             && (host == self.match_.host || self.match_.host == "*")
@@ -57,42 +58,38 @@ pub struct Forward {
     pub(crate) connect_fail_use_original_host: bool,
 }
 
-use std::sync::Arc;
-use tokio::sync::RwLock;
+use std::sync::RwLock;
 use tracing::debug;
 
 pub(crate) struct RouteEngine {
-    pub(crate) rules: Arc<RwLock<Vec<RouteRule>>>,
+    pub(crate) rules: RwLock<Vec<RouteRule>>,
 }
 
 impl RouteEngine {
+    /// 预留：按 host + 路径前缀匹配
     #[allow(unused)]
-    pub(crate) async fn resolve_target(&self, host: &str, path: &str) -> Option<RouteRule> {
+    pub(crate) fn resolve_target(&self, host: &str, path: &str) -> Option<RouteRule> {
         debug!("Resolving target {host}{path}");
-        let rules = self.rules.read().await;
-        for rule in rules.iter() {
-            // 匹配IP:PORT + 路径前缀
-            if rule.matches(host, path) {
-                return Some(rule.clone());
-            }
-        }
-        None
+        self.rules
+            .read()
+            .unwrap()
+            .iter()
+            .find(|r| r.matches(host, path))
+            .cloned()
     }
 
-    pub(crate) async fn resolve_target_by_host(&self, host: &str) -> Option<RouteRule> {
-        let rules = self.rules.read().await;
-        for rule in rules.iter() {
-            if rule.match_host(host) {
-                return Some(rule.clone());
-            }
-        }
-        None
+    pub(crate) fn resolve_by_host(&self, host: &str) -> Option<RouteRule> {
+        self.rules
+            .read()
+            .unwrap()
+            .iter()
+            .find(|r| r.match_host(host))
+            .cloned()
     }
 
-    // 动态更新规则
+    /// 预留：动态更新规则
     #[allow(unused)]
-    async fn update_rules(&self, new_rules: Vec<RouteRule>) {
-        let mut rules = self.rules.write().await;
-        *rules = new_rules;
+    pub(crate) fn update_rules(&self, new_rules: Vec<RouteRule>) {
+        *self.rules.write().unwrap() = new_rules;
     }
 }

@@ -12,7 +12,7 @@ pub const TIME_MILLISECOND_FORMAT: &str =
 /// app所在目录
 pub fn app_dir() -> String {
     std::env::current_exe()
-        .unwrap_or(std::path::PathBuf::new())
+        .unwrap_or_default()
         .parent()
         .unwrap_or(std::path::Path::new(work_dir().as_str()))
         .to_str()
@@ -23,7 +23,7 @@ pub fn app_dir() -> String {
 /// 获取工作目录
 pub fn work_dir() -> String {
     std::env::current_dir()
-        .unwrap_or(std::path::PathBuf::new())
+        .unwrap_or_default()
         .to_str()
         .unwrap_or(".")
         .to_string()

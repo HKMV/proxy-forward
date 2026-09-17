@@ -1,7 +1,6 @@
 use crate::core::config::AppConfig;
 use std::sync::Arc;
 use tokio::net::TcpListener;
-use tokio::sync::RwLock;
 use tracing::{error, info};
 
 mod core;
@@ -15,18 +14,21 @@ async fn main() -> anyhow::Result<()> {
     let listener = TcpListener::bind(config.listen_addr.as_str()).await?;
     info!("SOCKS5 proxy listening on {}", config.listen_addr);
 
-    let mut vec = Vec::new();
-    for r in config.rules {
-        let rule = core::route::RouteRule::new(
-            r.matcher.addr.as_str(),
-            r.matcher.path_prefix.as_str(),
-            r.forward.addr.as_str(),
-            r.forward.path_prefix.as_str(),
-        );
-        vec.push(rule);
-    }
-    let rules = Arc::new(RwLock::new(vec));
-    let route_engine = Arc::new(core::route::RouteEngine { rules });
+    let rules = config
+        .rules
+        .iter()
+        .map(|r| {
+            core::route::RouteRule::new(
+                &r.matcher.addr,
+                &r.matcher.path_prefix,
+                &r.forward.addr,
+                &r.forward.path_prefix,
+            )
+        })
+        .collect();
+    let route_engine = Arc::new(core::route::RouteEngine {
+        rules: std::sync::RwLock::new(rules),
+    });
     loop {
         let (socket, _) = listener.accept().await?;
         let engine = route_engine.clone();
