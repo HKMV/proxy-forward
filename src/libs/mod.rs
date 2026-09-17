@@ -1,11 +1,6 @@
 pub(crate) mod logs;
 
-#[allow(unused)]
 pub const APP_NAME: &str = env!("CARGO_PKG_NAME");
-#[allow(unused)]
-pub const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
-#[allow(unused)]
-pub const TIME_FORMAT: &str = "[year]-[month]-[day] [hour]:[minute]:[second]";
 pub const TIME_MILLISECOND_FORMAT: &str =
     "[year]-[month]-[day] [hour]:[minute]:[second].[subsecond digits:3]";
 

@@ -22,7 +22,10 @@ pub(crate) async fn forward_handle(
     let (mut server_reader, mut server_writer) = tokio::io::split(server);
 
     let forward = match TcpStream::connect(&rule.forward.host).await {
-        Ok(ts) => Some(ts),
+        Ok(ts) => {
+            ts.set_nodelay(true).ok();
+            Some(ts)
+        }
         Err(e) => {
             if rule.forward.connect_fail_use_original_host {
                 error!("Connect to forward host failed, use original host: {}", e);
@@ -237,7 +240,6 @@ pub(crate) async fn parse_http_header(stream: &TcpStream) -> Option<(String, Str
 
     let mut headers = [httparse::EMPTY_HEADER; 16];
     let mut req = httparse::Request::new(&mut headers);
-    // debug!("req_str {}", String::from_utf8_lossy(&buf[..n]));
 
     let _status = req.parse(&buf[..n]).ok()?;
     let path = req.path?.to_string();
@@ -247,7 +249,6 @@ pub(crate) async fn parse_http_header(stream: &TcpStream) -> Option<(String, Str
         .find(|h| h.name.eq_ignore_ascii_case("host"))
         .and_then(|h| std::str::from_utf8(h.value).ok())?
         .to_string();
-    // debug!("req_path {path}");
     Some((host, path))
 }
 

@@ -1,33 +1,28 @@
+use crate::libs::{APP_NAME, TIME_MILLISECOND_FORMAT};
 use std::fs;
-use tracing::level_filters::LevelFilter;
+use std::sync::LazyLock;
 use tracing::Level;
-use tracing_subscriber::fmt::format::FmtSpan;
+use tracing::level_filters::LevelFilter;
 use tracing_subscriber::fmt::writer::MakeWriterExt;
 use tracing_subscriber::util::SubscriberInitExt;
-use crate::libs::{APP_NAME, TIME_MILLISECOND_FORMAT};
+
+/// 时间格式只解析一次
+static TS_FORMAT: LazyLock<Vec<time::format_description::FormatItem<'static>>> =
+    LazyLock::new(|| time::format_description::parse(TIME_MILLISECOND_FORMAT).unwrap());
 
 /// 初始化日志
-#[allow(unused)]
 pub fn init(log_file: String, level: LevelFilter) -> anyhow::Result<()> {
     let current_dir = crate::libs::app_dir();
     let logs_dir = current_dir + "/logs/";
     fs::create_dir_all(logs_dir.clone())?;
-    // let log_file_path = logs_dir.clone().to_string() + log_file;
 
     hook_panic_handler(logs_dir.clone(), log_file.clone());
     init_tracing(logs_dir, log_file, level);
     Ok(())
 }
 
-#[allow(unused)]
 pub fn init_default() -> anyhow::Result<()> {
     init(APP_NAME.to_owned(), LevelFilter::DEBUG)
-}
-
-#[allow(unused)]
-pub fn init_debug() -> anyhow::Result<()> {
-    init_tracing("".to_string(), "".to_string(), LevelFilter::DEBUG);
-    Ok(())
 }
 
 /// 拦截panic处理，保存panic信息到panic日志中
@@ -36,20 +31,12 @@ pub fn init_debug() -> anyhow::Result<()> {
 ///
 /// * `logs_dir`: 日志保存位置
 /// * `app_name`: 应用名称
-///
-/// returns: ()
-///
-/// # Examples
-///
-/// ```
-/// logs::setup_panic_handler(String::from("./logs/"), String::from("nal"));
-/// ```
 fn hook_panic_handler(logs_dir: String, app_name: String) {
     use std::backtrace;
     use std::fs::OpenOptions;
     use std::io::Write;
-    use time::macros::offset;
     use time::OffsetDateTime;
+    use time::macros::offset;
 
     std::panic::set_hook(Box::new(move |info| {
         let backtrace = backtrace::Backtrace::force_capture();
@@ -72,10 +59,9 @@ fn hook_panic_handler(logs_dir: String, app_name: String) {
             println!("panic occurred: location: {:?}", info.location());
         }
 
-        let format = time::format_description::parse(TIME_MILLISECOND_FORMAT).unwrap();
         let current_time = OffsetDateTime::now_utc()
             .to_offset(offset!(+8))
-            .format(&format)
+            .format(&TS_FORMAT)
             .unwrap_or_else(|e| {
                 println!("get current time error: {:?}", e);
                 "".to_string()
@@ -89,13 +75,11 @@ fn hook_panic_handler(logs_dir: String, app_name: String) {
                 f.write_all(format!("{} {:?}\n{:#?}\n", current_time, info, backtrace).as_bytes())
             });
         println!("panic backtrace saved");
-        std::process::exit(1);
+        // 注意: 不 exit, tokio task 的 panic 是隔离的, 单个连接出错不应杀掉整个代理进程
     }));
 }
 
 fn init_tracing(logs_dir: String, log_file: String, level: LevelFilter) {
-    let format = time::format_description::parse(TIME_MILLISECOND_FORMAT).unwrap();
-
     let tracing_level = level.into_level().unwrap();
 
     let builder = tracing_subscriber::fmt()
@@ -105,12 +89,10 @@ fn init_tracing(logs_dir: String, log_file: String, level: LevelFilter) {
         .with_line_number(true)
         .with_thread_names(true)
         .with_thread_ids(true)
-        .with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
-        .with_test_writer()
         .with_max_level(tracing_level)
         .with_timer(tracing_subscriber::fmt::time::OffsetTime::new(
             time::macros::offset!(+8),
-            format,
+            TS_FORMAT.clone(),
         ))
         .with_ansi(false);
     if cfg!(debug_assertions) {

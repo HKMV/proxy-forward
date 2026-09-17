@@ -1,6 +1,5 @@
-use config::{Config, ConfigError, File};
 use serde::{Deserialize, Serialize};
-use std::io::Write;
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct AppConfig {
@@ -10,42 +9,35 @@ pub struct AppConfig {
 }
 impl Default for AppConfig {
     fn default() -> Self {
-        let mut config = Self {
-            rules: Vec::new(),
+        Self {
+            rules: vec![Rule {
+                //默认示例
+                matcher: Host {
+                    addr: "192.168.120.177:81".to_string(),
+                    path_prefix: "/api".to_string(),
+                },
+                forward: Host {
+                    addr: "127.0.0.1:8686".to_string(),
+                    path_prefix: "".to_string(),
+                },
+            }],
             listen_addr: "127.0.0.1:1080".to_string(),
-        };
-        //默认示例
-        config.rules.push(Rule {
-            matcher: Host {
-                addr: "192.168.120.177:81".to_string(),
-                path_prefix: "/api".to_string(),
-            },
-            forward: Host {
-                addr: "127.0.0.1:8686".to_string(),
-                path_prefix: "".to_string(),
-            },
-        });
-
-        config
+        }
     }
 }
 impl AppConfig {
-    pub(crate) fn init() -> Result<Self, ConfigError> {
+    pub(crate) fn init() -> anyhow::Result<Self> {
         let conf_file_path = "config.toml";
-        let result = std::fs::File::open(conf_file_path);
-        if result.is_err() {
-            let mut file = std::fs::File::create(conf_file_path).unwrap();
-            let config = AppConfig::default();
-            let ac = toml::to_string(&config).unwrap_or("".into());
-            file.write_all(ac.as_ref()).unwrap();
-            file.flush().unwrap();
+        match std::fs::read_to_string(conf_file_path) {
+            Ok(content) => Ok(toml::from_str(&content)?),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                // 首次运行生成默认配置
+                let config = AppConfig::default();
+                std::fs::write(conf_file_path, toml::to_string(&config)?)?;
+                Ok(config)
+            }
+            Err(e) => Err(e.into()),
         }
-
-        let c = Config::builder()
-            .add_source(File::with_name(conf_file_path))
-            .build()?;
-
-        c.try_deserialize()
     }
 }
 
