@@ -1,11 +1,11 @@
 listen_addr = "127.0.0.1:1080"
+theme = "dark"
+auto_proxy = true
 
 [[rules]]
+matcher = { addr = "192.168.120.177:81", path_prefix = "/api" }
+forward = { addr = "127.0.0.1:8686", path_prefix = "" }
 
-[rules.matcher]
-addr = "192.168.120.177:81"
-path_prefix = "/api"
-
-[rules.forward]
-addr = "127.0.0.1:8686"
-path_prefix = ""
+[[rules]]
+matcher = { addr = "192.168.120.181:81", path_prefix = "/api" }
+forward = { addr = "127.0.0.1:8886", path_prefix = "" }

@@ -15,8 +15,11 @@ tracing-appender = "0.2"
 
 time = { version = "0.3", features = ["parsing", "macros"] }
 
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "sync"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "sync", "signal"] }
 httparse = "1.10"
+dark-light = "3.0.0"
+fltk = { version = "1.5.23", features = ["fltk-bundled"] }
+fltk-theme = "0.7.9"
 
 [profile.release]
 lto = true

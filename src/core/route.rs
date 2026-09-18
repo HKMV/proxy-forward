@@ -90,8 +90,7 @@ impl RouteEngine {
     }
 
     // 动态更新规则
-    #[allow(unused)]
-    async fn update_rules(&self, new_rules: Vec<RouteRule>) {
+    pub(crate) async fn update_rules(&self, new_rules: Vec<RouteRule>) {
         let mut rules = self.rules.write().await;
         *rules = new_rules;
     }

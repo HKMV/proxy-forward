@@ -34,7 +34,8 @@ impl Command {
     }
 }
 use crate::core::route::RouteEngine;
-use anyhow::{Result, anyhow};
+use crate::core::stats::Stats;
+use anyhow::{Context, Result, anyhow};
 use std::sync::Arc;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -44,7 +45,15 @@ use tokio::{
 pub(crate) async fn handle_client(
     mut client: TcpStream,
     route_engine: Arc<RouteEngine>,
+    stats: Arc<Stats>,
 ) -> Result<()> {
+    let _guard = stats.conn_open();
+    // 协议探测：首字节 0x05 = SOCKS5，否则按 HTTP 代理处理
+    let mut probe = [0u8; 1];
+    client.peek(&mut probe).await?;
+    if probe[0] != 0x05 {
+        return crate::core::http::handle_http_proxy(client, route_engine, stats).await;
+    }
     // 1. 认证协商: VER NMETHODS METHODS...
     let mut head = [0u8; 2];
     client.read_exact(&mut head).await?;
@@ -100,7 +109,9 @@ pub(crate) async fn handle_client(
 
     // 4. 连接目标服务器
     client.set_nodelay(true).ok();
-    let server = TcpStream::connect(address).await?;
+    let server = TcpStream::connect(&address)
+        .await
+        .with_context(|| format!("connect {address}"))?;
     server.set_nodelay(true).ok();
 
     let route_rule = match crate::core::http::parse_http_header(&client).await {
@@ -113,13 +124,16 @@ pub(crate) async fn handle_client(
         // 未匹配到路由规则,直接转发
         let (mut client_reader, mut client_writer) = tokio::io::split(client);
         let (mut server_reader, mut server_writer) = tokio::io::split(server);
-        tokio::try_join!(
+        // ponytail: 字节数在 copy 结束后一次性累计，非实时；要实时曲线再换带计数的 copy
+        let (up, down) = tokio::try_join!(
             tokio::io::copy(&mut client_reader, &mut server_writer),
             tokio::io::copy(&mut server_reader, &mut client_writer)
         )?;
+        stats.up(up as usize);
+        stats.down(down as usize);
         return Ok(());
     };
-    crate::core::http::forward_handle(client, server, &rule).await
+    crate::core::http::forward_handle(client, server, &rule, &stats).await
 }
 
 // #[tokio::test]
@@ -145,7 +159,7 @@ async fn test_socks() -> Result<()> {
             vec.push(rule);
             let rules = Arc::new(RwLock::new(vec));
             let route_engine = Arc::new(RouteEngine { rules });
-            if let Err(e) = handle_client(socket, route_engine).await {
+            if let Err(e) = handle_client(socket, route_engine, crate::core::stats::Stats::shared()).await {
                 error!("Error handling client: {}", e);
             }
         });
