@@ -13,7 +13,7 @@
 - **双协议代理**：同一监听端口自动识别 SOCKS5 与 HTTP 代理（CONNECT + 绝对路径请求）
 - **规则转发**：按 `Host:Port` + 请求路径前缀匹配，转发到目标地址并重写路径前缀
 - **GUI 桌面端**（默认）：规则增删改、保存热重载、连接/流量统计、实时日志、一键系统代理、深浅色主题切换
-- **命令行模式**：`--headless` 无界面运行，内存占用 ~14MB，适合常驻
+- **轻量**：GUI 空闲约 3.5MB 内存（开启代理 ~4MB，随请求量增长）；`--headless` 无界面模式启动仅 ~1.6MB，适合常驻
 - 自动生成默认 `config.toml`，配置文件改动即时生效
 - 转发失败可返回 503 或回退原始地址
 
@@ -36,6 +36,19 @@ cargo run --release -- --headless
 ```
 
 首次运行会在当前目录生成默认 `config.toml`。
+
+### 打包分发
+
+```bash
+cargo build --release
+```
+
+产物是单文件 `target/release/proxy-forward.exe`（Windows），所有依赖（含 fltk GUI）静态链接，无需安装任何运行时，拷贝到任意目录双击即用。
+
+- 双击 / 直接运行 → GUI 模式
+- `proxy-forward.exe --headless` → 无界面代理模式
+
+注意：配置文件读取的是**程序运行时所在的目录**下的 `config.toml`，不存在则自动生成默认配置。
 
 ### GUI 使用
 
