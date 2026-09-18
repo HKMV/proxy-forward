@@ -1,5 +1,7 @@
 # proxy-forward
 
+<img src="assets/app-icon-256.png" width="96" align="right" />
+
 > 本地开发调试用的轻量级转发工具：单端口同时支持 SOCKS5 和 HTTP 代理协议，按 `Host + 路径前缀` 转发并支持路径重写。带 GUI（规则编辑 / 实时统计 / 日志 / 系统代理联动），Rust 编写。
 
 ## 截图
