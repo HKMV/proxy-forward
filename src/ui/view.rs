@@ -278,6 +278,10 @@ pub fn build(config: &AppConfig, pal: Palette) -> View {
     let mut win = Window::default().with_size(800, 780).center_screen();
     win.set_label("proxy-forward");
     win.set_border(false); // 无边框
+    // 窗口/任务栏图标（内嵌，无外部文件依赖）
+    if let Ok(icon) = fltk::image::PngImage::from_data(include_bytes!("../../assets/app-icon-64.png")) {
+        win.set_icon(Some(icon));
+    }
     // 窗口底色当边框用，内容区内缩 1px 形成浅色边框
     win.set_color(pal.border);
 
@@ -574,6 +578,7 @@ pub fn platform_window_fixups(win: &Window) {
     unsafe extern "C" {
         fn GetWindowLongPtrW(hwnd: isize, idx: i32) -> isize;
         fn SetWindowLongPtrW(hwnd: isize, idx: i32, val: isize) -> isize;
+        fn ShowWindow(hwnd: isize, cmd: i32) -> i32;
     }
     const GWL_EXSTYLE: i32 = -20;
     const GWL_STYLE: i32 = -16;
@@ -593,6 +598,9 @@ pub fn platform_window_fixups(win: &Window) {
         // 补 WS_MINIMIZEBOX，任务栏图标再次点击才能最小化
         let style = GetWindowLongPtrW(hwnd, GWL_STYLE);
         SetWindowLongPtrW(hwnd, GWL_STYLE, style | WS_MINIMIZEBOX);
+        // 任务栏按钮在 show 时已创建，hide→show 强制按新样式重建
+        ShowWindow(hwnd, 0); // SW_HIDE
+        ShowWindow(hwnd, 5); // SW_SHOW
     }
 }
 
