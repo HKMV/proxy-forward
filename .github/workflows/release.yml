@@ -20,6 +20,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # fltk GUI 库在 Linux 下链接需要 X11/pango/cairo 等系统库
+      - name: Install Linux dependencies (fltk)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libxext-dev libxinerama-dev libxcursor-dev libxrender-dev libxfixes-dev libxft-dev libfontconfig-dev libpango1.0-dev libcairo2-dev
+
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
