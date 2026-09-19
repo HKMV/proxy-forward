@@ -1,6 +1,6 @@
 [package]
 name = "devroute"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2024"
 
 [dependencies]
@@ -25,3 +25,6 @@ fltk-theme = "0.7.9"
 lto = true
 codegen-units = 1
 strip = true
+
+[build-dependencies]
+winres = "0.1.12"

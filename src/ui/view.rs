@@ -290,6 +290,14 @@ pub fn build(config: &AppConfig, pal: Palette) -> View {
     title_bar.set_frame(FrameType::FlatBox);
     title_bar.set_color(pal.bg);
     title_bar.set_margin(2);
+    // 标题栏图标（Frame 不会自动缩放，手动缩到 16px）
+    let mut icon = Frame::default();
+    if let Ok(mut img) = fltk::image::PngImage::from_data(include_bytes!("../../assets/app-icon-64.png")) {
+        img.scale(20, 20, true, true);
+        icon.set_image(Some(img));
+        icon.set_frame(FrameType::NoBox);
+    }
+    title_bar.fixed(&icon, 26);
     let mut title = Frame::default().with_label("开发路由");
     title.set_label_size(16);
     title.set_label_color(pal.text);
