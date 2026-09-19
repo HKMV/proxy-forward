@@ -1,8 +1,8 @@
-# proxy-forward
+# devroute（开发路由）
 
 <img src="assets/app-icon-256.png" width="96" align="right" />
 
-> 本地开发调试用的轻量级转发工具：单端口同时支持 SOCKS5 和 HTTP 代理协议，按 `Host + 路径前缀` 转发并支持路径重写。带 GUI（规则编辑 / 实时统计 / 日志 / 系统代理联动），Rust 编写。
+> 本地开发调试用的转发工具：**极致轻量，内存占用仅 3.5MB 起（无界面模式 1.6MB）**，2MB 单文件即拷即用。单端口同时支持 SOCKS5 和 HTTP 代理协议，按 `Host + 路径前缀` 转发并支持路径重写。带 GUI（规则编辑 / 实时统计 / 日志 / 系统代理联动），Rust 编写。
 
 ## 截图
 
@@ -45,10 +45,10 @@ cargo run --release -- --headless
 cargo build --release
 ```
 
-产物是单文件 `target/release/proxy-forward.exe`（Windows），所有依赖（含 fltk GUI）静态链接，无需安装任何运行时，拷贝到任意目录双击即用。
+产物是单文件 `target/release/devroute.exe`（Windows），所有依赖（含 fltk GUI）静态链接，无需安装任何运行时，拷贝到任意目录双击即用。
 
 - 双击 / 直接运行 → GUI 模式
-- `proxy-forward.exe --headless` → 无界面代理模式
+- `devroute.exe --headless` → 无界面代理模式
 
 注意：配置文件读取的是**程序运行时所在的目录**下的 `config.toml`，不存在则自动生成默认配置。
 

@@ -276,7 +276,7 @@ fn attach_drag<W: WidgetBase>(w: &mut W, win: &Window) {
 /// 构建整个窗口（不 show，由调用方决定时机）
 pub fn build(config: &AppConfig, pal: Palette) -> View {
     let mut win = Window::default().with_size(800, 780).center_screen();
-    win.set_label("proxy-forward");
+    win.set_label("开发路由");
     win.set_border(false); // 无边框
     // 窗口/任务栏图标（内嵌，无外部文件依赖）
     if let Ok(icon) = fltk::image::PngImage::from_data(include_bytes!("../../assets/app-icon-64.png")) {
@@ -290,7 +290,7 @@ pub fn build(config: &AppConfig, pal: Palette) -> View {
     title_bar.set_frame(FrameType::FlatBox);
     title_bar.set_color(pal.bg);
     title_bar.set_margin(2);
-    let mut title = Frame::default().with_label("proxy-forward");
+    let mut title = Frame::default().with_label("开发路由");
     title.set_label_size(16);
     title.set_label_color(pal.text);
     title.set_align(Align::Left | Align::Inside);

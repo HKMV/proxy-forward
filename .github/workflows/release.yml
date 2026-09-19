@@ -62,15 +62,15 @@ jobs:
         run: |
           mkdir -p release
           if [ "${{ runner.os }}" = "Windows" ]; then
-            cp target/release/proxy-forward.exe release/proxy-forward-${{ matrix.os }}.exe
+            cp target/release/devroute.exe release/devroute-${{ matrix.os }}.exe
           else
-            cp target/release/proxy-forward release/proxy-forward-${{ matrix.os }}
+            cp target/release/devroute release/devroute-${{ matrix.os }}
           fi
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: proxy-forward-${{ matrix.os }}
+          name: devroute-${{ matrix.os }}
           path: release/*
 
   publish:
@@ -86,19 +86,19 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          name: proxy-forward-ubuntu-latest
+          name: devroute-ubuntu-latest
           path: release/ubuntu
 
       - name: Download macOS artifact
         uses: actions/download-artifact@v4
         with:
-          name: proxy-forward-macos-latest
+          name: devroute-macos-latest
           path: release/macos
 
       - name: Download Windows artifact
         uses: actions/download-artifact@v4
         with:
-          name: proxy-forward-windows-latest
+          name: devroute-windows-latest
           path: release/windows
 
       - name: Create GitHub release
@@ -117,8 +117,8 @@ jobs:
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: release/ubuntu/proxy-forward-ubuntu-latest
-          asset_name: proxy-forward-linux
+          asset_path: release/ubuntu/devroute-ubuntu-latest
+          asset_name: devroute-linux
           asset_content_type: application/octet-stream
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -126,8 +126,8 @@ jobs:
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: release/macos/proxy-forward-macos-latest
-          asset_name: proxy-forward-macos
+          asset_path: release/macos/devroute-macos-latest
+          asset_name: devroute-macos
           asset_content_type: application/octet-stream
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -135,7 +135,7 @@ jobs:
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: release/windows/proxy-forward-windows-latest.exe
-          asset_name: proxy-forward-windows.exe
+          asset_path: release/windows/devroute-windows-latest.exe
+          asset_name: devroute-windows.exe
           asset_content_type: application/octet-stream
           token: ${{ secrets.GITHUB_TOKEN }}

@@ -1,6 +1,6 @@
 [package]
-name = "proxy-forward"
-version = "0.2.1"
+name = "devroute"
+version = "0.3.0"
 edition = "2024"
 
 [dependencies]
